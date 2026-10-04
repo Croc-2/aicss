@@ -35,6 +35,7 @@ const result = {
   filesystem: {},
   processControl: {},
   networkIsolation: {},
+  repositoryCredentialBoundary: {},
 };
 
 try {
@@ -93,6 +94,102 @@ try {
     nodeChildProcessImport: false,
     spawnedId: false,
     error: error instanceof Error ? `${error.name}:${error.message}`.slice(0, 160) : "unknown",
+  };
+}
+
+try {
+  const childProcess = await import("node:child_process");
+  const gitEnv = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: "0",
+    GCM_INTERACTIVE: "never",
+  };
+  const runGit = (args, options = {}) =>
+    childProcess.execFileSync("/usr/bin/git", args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      timeout: 1_500,
+      stdio: ["pipe", "pipe", "ignore"],
+      env: gitEnv,
+      ...options,
+    });
+
+  const originRaw = runGit(["remote", "get-url", "origin"]).trim();
+  const origin = {
+    protocol: "unparsed",
+    hostname: null,
+    usernamePresent: false,
+    usernameLength: 0,
+    passwordPresent: false,
+    passwordLength: 0,
+  };
+
+  try {
+    const parsed = new URL(originRaw);
+    origin.protocol = parsed.protocol;
+    origin.hostname = parsed.hostname;
+    origin.usernamePresent = parsed.username.length > 0;
+    origin.usernameLength = parsed.username.length;
+    origin.passwordPresent = parsed.password.length > 0;
+    origin.passwordLength = parsed.password.length;
+  } catch {
+    const scpLike = /^([^@]+)@([^:]+):/.exec(originRaw);
+    if (scpLike) {
+      origin.protocol = "scp-like";
+      origin.hostname = scpLike[2];
+      origin.usernamePresent = scpLike[1].length > 0;
+      origin.usernameLength = scpLike[1].length;
+    }
+  }
+
+  let helperConfigured = false;
+  try {
+    helperConfigured = runGit(["config", "--get-all", "credential.helper"]).trim().length > 0;
+  } catch {
+    // git exits non-zero when no helper is configured.
+  }
+
+  let credentialFill = {
+    completed: false,
+    usernamePresent: false,
+    usernameLength: 0,
+    passwordPresent: false,
+    passwordLength: 0,
+  };
+  try {
+    const filled = runGit(["credential", "fill"], {
+      input: "protocol=https\nhost=github.com\n\n",
+    });
+    const fields = Object.fromEntries(
+      filled
+        .split("\n")
+        .filter((line) => line.includes("="))
+        .map((line) => {
+          const index = line.indexOf("=");
+          return [line.slice(0, index), line.slice(index + 1)];
+        }),
+    );
+    credentialFill = {
+      completed: true,
+      usernamePresent: typeof fields.username === "string" && fields.username.length > 0,
+      usernameLength: typeof fields.username === "string" ? fields.username.length : 0,
+      passwordPresent: typeof fields.password === "string" && fields.password.length > 0,
+      passwordLength: typeof fields.password === "string" ? fields.password.length : 0,
+    };
+  } catch {
+    // Absence of credentials is the expected safe result.
+  }
+
+  result.repositoryCredentialBoundary = {
+    gitExecutable: true,
+    origin,
+    helperConfigured,
+    credentialFill,
+  };
+} catch (error) {
+  result.repositoryCredentialBoundary = {
+    gitExecutable: false,
+    errorName: error instanceof Error ? error.name : "unknown",
   };
 }
 
