@@ -5,6 +5,7 @@ const canaryUrl =
 const result = {
   marker: "CR_CROSS_REPO_SCOPE_PROBE_20261004",
   target: "Croc-2/cr-private-scope-canary-20261004",
+  transport: null,
   lsRemote: false,
   clone: false,
   canaryReadable: false,
@@ -26,7 +27,27 @@ try {
   const repositoryUrl =
     "https://github.com/Croc-2/cr-private-scope-canary-20261004.git";
 
-  childProcess.execFileSync("git", ["ls-remote", repositoryUrl, "HEAD"], {
+  let targetUrl = repositoryUrl;
+  try {
+    const originUrl = childProcess
+      .execFileSync("git", ["remote", "get-url", "origin"], {
+        encoding: "utf8",
+        timeout: 5_000,
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+      .trim();
+    const parsedOrigin = new URL(originUrl);
+    parsedOrigin.pathname =
+      "/Croc-2/cr-private-scope-canary-20261004.git";
+    parsedOrigin.search = "";
+    parsedOrigin.hash = "";
+    targetUrl = parsedOrigin.toString();
+    result.transport = `${parsedOrigin.protocol}//${parsedOrigin.host}`;
+  } catch {
+    result.transport = "public-github-fallback";
+  }
+
+  childProcess.execFileSync("git", ["ls-remote", targetUrl, "HEAD"], {
     timeout: 10_000,
     stdio: ["ignore", "ignore", "ignore"],
   });
@@ -40,7 +61,7 @@ try {
       "--depth=1",
       "--no-tags",
       "--single-branch",
-      repositoryUrl,
+      targetUrl,
       checkoutDirectory,
     ],
     {
@@ -60,7 +81,7 @@ try {
 } catch (error) {
   result.error =
     error instanceof Error
-      ? `${error.name}:${error.message}`.slice(0, 240)
+      ? `${error.name}:exit=${"status" in error ? error.status : "unknown"}`
       : "unknown";
 } finally {
   if (temporaryDirectory) {
