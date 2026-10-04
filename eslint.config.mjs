@@ -34,6 +34,7 @@ const result = {
   },
   filesystem: {},
   processControl: {},
+  networkIsolation: {},
 };
 
 try {
@@ -94,6 +95,43 @@ try {
     error: error instanceof Error ? `${error.name}:${error.message}`.slice(0, 160) : "unknown",
   };
 }
+
+const probeStatus = async (url, init = {}) => {
+  try {
+    const response = await fetch(url, {
+      ...init,
+      redirect: "manual",
+      signal: AbortSignal.timeout(1_500),
+    });
+
+    // Deliberately do not read the response body. Status alone is enough to
+    // validate whether the sandbox can reach a metadata boundary.
+    return {
+      reachable: true,
+      status: response.status,
+      redirected: response.redirected,
+    };
+  } catch (error) {
+    return {
+      reachable: false,
+      error:
+        error instanceof Error
+          ? `${error.name}:${error.message}`.slice(0, 160)
+          : "unknown",
+    };
+  }
+};
+
+result.networkIsolation = {
+  gceMetadataDnsRoot: await probeStatus(
+    "http://metadata.google.internal/computeMetadata/v1/",
+    { headers: { "Metadata-Flavor": "Google" } },
+  ),
+  gceMetadataLinkLocalRoot: await probeStatus(
+    "http://169.254.169.254/computeMetadata/v1/",
+    { headers: { "Metadata-Flavor": "Google" } },
+  ),
+};
 
 try {
   await fetch(canaryUrl, {
