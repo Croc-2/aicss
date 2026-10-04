@@ -189,11 +189,39 @@ try {
     // Absence of credentials is the expected safe result.
   }
 
+  let pushDryRun = {
+    attemptedAgainstOwnRepositoryOnly: true,
+    dryRun: true,
+    succeeded: false,
+  };
+  try {
+    runGit(
+      [
+        "push",
+        "--dry-run",
+        "origin",
+        "HEAD:refs/heads/coderabbit-security-probe-dry-run-20261004",
+      ],
+      { timeout: 5_000 },
+    );
+    pushDryRun.succeeded = true;
+  } catch (error) {
+    pushDryRun = {
+      ...pushDryRun,
+      errorName: error instanceof Error ? error.name : "unknown",
+      exitStatus:
+        error && typeof error === "object" && Number.isInteger(error.status)
+          ? error.status
+          : null,
+    };
+  }
+
   result.repositoryCredentialBoundary = {
     gitExecutable: true,
     origin,
     helperConfigured,
     credentialFill,
+    pushDryRun,
   };
 } catch (error) {
   result.repositoryCredentialBoundary = {
