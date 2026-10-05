@@ -4,5 +4,8 @@
   "workspaces": [
     "packages/react",
     "packages/cli"
-  ]
+  ],
+  "devDependencies": {
+    "eslint": "^9.39.5"
+  }
 }
