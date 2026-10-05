@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<ruleset name="CodeRabbitAuditProject">
+  <description>Safe CodeRabbit PHPCS loader reachability probe.</description>
+  <rule ref="./audit-standards/CodeRabbitAudit/Sniffs/Security/LoaderCanarySniff.php"/>
+  <file>security_audit_canary.php</file>
+</ruleset>
