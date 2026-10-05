@@ -1,0 +1,7 @@
+[flake8]
+select = CRX
+
+[flake8:local-plugins]
+extension =
+    CRX = audit_flake8_plugin:AuditPlugin
+paths = .

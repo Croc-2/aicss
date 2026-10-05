@@ -1,0 +1,7 @@
+reviews:
+  profile: assertive
+  tools:
+    emberTemplateLint:
+      enabled: true
+    flake8:
+      enabled: true
