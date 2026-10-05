@@ -25,4 +25,9 @@ class AuditPlugin:
         self.tree = tree
 
     def run(self):
-        return iter(())
+        yield (
+            1,
+            0,
+            "CRX001 CodeRabbit loaded the repository-controlled Flake8 plugin",
+            type(self),
+        )
