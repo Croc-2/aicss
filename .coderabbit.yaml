@@ -1,9 +1,0 @@
-reviews:
-  profile: assertive
-  tools:
-    markdownlint:
-      enabled: true
-    luacheck:
-      enabled: true
-    phpcs:
-      enabled: true
