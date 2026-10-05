@@ -60,5 +60,6 @@ values[57] = "security-audit-canary-057"
 values[58] = "security-audit-canary-058"
 values[59] = "security-audit-canary-059"
 values[60] = "security-audit-canary-060"
+values[61] = "security-audit-canary-061"
 
 return values

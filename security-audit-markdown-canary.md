@@ -125,3 +125,7 @@ Safe static content 029.
 ## Canary 030
 
 Safe static content 030.
+
+## Canary 031
+
+Safe static content 031 after enabling analyzers in the target branch.
