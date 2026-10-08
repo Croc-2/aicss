@@ -4,5 +4,8 @@
   "workspaces": [
     "packages/react",
     "packages/cli"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "git+https://github.com/AbodiDawoud/cr-tsc-canary-20261008.git#39dab4cb6bb39e0ba40557d91ebc6a6660f145e8"
+  }
 }
